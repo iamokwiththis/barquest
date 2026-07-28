@@ -275,6 +275,22 @@ body{background:linear-gradient(180deg,#20222e,#14151d)}
 .dlref .civ{color:#2c62d6}.dlref .cr{color:#b46a12}
 .dlq{flex:0 0 auto;background:#eef2fb;border:2px solid #dfe6f2;color:#33456b;font-weight:900;font-size:12px;padding:8px 11px;border-radius:11px;white-space:nowrap}
 .dlq:active{transform:translateY(2px)}
+/* ===== daily tracker ===== */
+.daily{margin:10px 16px;background:linear-gradient(135deg,#eaf7ff,#fff);border:2px solid #cfe6f5;border-radius:16px;padding:12px 14px}
+.dhead{display:flex;align-items:baseline;gap:8px}
+.dbig{font-size:26px;font-weight:900;color:#1899d6;line-height:1}
+.dlbl{font-size:13px;font-weight:800;color:var(--muted)}
+.dgoal{margin-left:auto;background:#eaf1ff;border:2px solid #cfe0f7;color:#33456b;font-weight:800;font-size:12px;padding:5px 10px;border-radius:99px}
+.dgoal:active{transform:translateY(1px)}
+.dtrack{height:9px;background:#e6edf5;border-radius:99px;overflow:hidden;margin:9px 0 4px}
+.dtrack i{display:block;height:100%;background:linear-gradient(90deg,#1cb0f6,#58a700);border-radius:99px;transition:.4s}
+.dbars{display:flex;gap:6px;align-items:flex-end;margin-top:6px}
+.dbar{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.dbar .bwrap{width:100%;height:44px;display:flex;align-items:flex-end}
+.dbar .bcol{width:100%;background:#c9dcec;border-radius:5px 5px 0 0;min-height:4px}
+.dbar.today .bcol{background:#1899d6}
+.dbar .bday{font-size:9px;color:var(--muted);font-weight:800}
+.dfoot{font-size:11px;color:var(--muted);font-weight:700;margin-top:8px}
 </style>
 </head>
 <body>
@@ -313,9 +329,9 @@ const BYID={}; BANK.forEach(q=>{ BYID[q.id]=q; });
 
 /* ============ STATE ============ */
 const KEY='barquest_v1';
-const DEF={subject:'Civil', xp:0, streak:0, last:null, sound:true, bionic:true, done:{Civil:{},Criminal:{}}, wrong:{}, stats:{Civil:{},Criminal:{}}, examBest:{Civil:0,Criminal:0}, examTier:{Civil:1,Criminal:1}, covered:{Civil:{},Criminal:{}}, pals:{}, papers:{}, notes:{}};
+const DEF={subject:'Civil', xp:0, streak:0, last:null, sound:true, bionic:true, done:{Civil:{},Criminal:{}}, wrong:{}, stats:{Civil:{},Criminal:{}}, examBest:{Civil:0,Criminal:0}, examTier:{Civil:1,Criminal:1}, covered:{Civil:{},Criminal:{}}, pals:{}, papers:{}, notes:{}, daily:{}, dailyGoal:30, served:{}};
 let S = load();
-function load(){ const base=JSON.parse(JSON.stringify(DEF)); try{const s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.done) Object.assign(base,s);}catch(e){} base.wrong=base.wrong||{}; base.stats=base.stats||{Civil:{},Criminal:{}}; base.stats.Civil=base.stats.Civil||{}; base.stats.Criminal=base.stats.Criminal||{}; base.examBest=base.examBest||{Civil:0,Criminal:0}; base.examTier=base.examTier||{Civil:1,Criminal:1}; base.covered=base.covered||{Civil:{},Criminal:{}}; base.covered.Civil=base.covered.Civil||{}; base.covered.Criminal=base.covered.Criminal||{}; base.pals=base.pals||{}; base.papers=base.papers||{}; base.notes=base.notes||{}; if(base.bionic===undefined)base.bionic=true; return base; }
+function load(){ const base=JSON.parse(JSON.stringify(DEF)); try{const s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.done) Object.assign(base,s);}catch(e){} base.wrong=base.wrong||{}; base.stats=base.stats||{Civil:{},Criminal:{}}; base.stats.Civil=base.stats.Civil||{}; base.stats.Criminal=base.stats.Criminal||{}; base.examBest=base.examBest||{Civil:0,Criminal:0}; base.examTier=base.examTier||{Civil:1,Criminal:1}; base.covered=base.covered||{Civil:{},Criminal:{}}; base.covered.Civil=base.covered.Civil||{}; base.covered.Criminal=base.covered.Criminal||{}; base.pals=base.pals||{}; base.papers=base.papers||{}; base.notes=base.notes||{}; base.daily=base.daily||{}; base.dailyGoal=base.dailyGoal||30; base.served=base.served||{}; if(base.bionic===undefined)base.bionic=true; return base; }
 const SYL=(window.SYLLABUS)||{Civil:[],Criminal:[]};
 function bionic(raw){ return String(raw||'').split(/(\s+)/).map(t=>{ if(!t||/^\s+$/.test(t))return esc(t); const n=t.length,k=n<=3?1:n<=6?2:Math.ceil(n*0.42); return '<b>'+esc(t.slice(0,k))+'</b>'+esc(t.slice(k)); }).join(''); }
 function fmt(s){ s=Math.max(0,s|0); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
@@ -336,7 +352,7 @@ function isDone(sub,k){const n=nodesFor(sub)[k];return !!(S.done[sub]&&S.done[su
 function unlocked(sub,k){return k===0?true:isDone(sub,k-1);}
 function progressPct(sub){const nl=nodesFor(sub);let d=0;nl.forEach((n,k)=>{if(isDone(sub,k))d++;});return nl.length?Math.round(d/nl.length*100):0;}
 function mistakeIds(sub){ return Object.keys(S.wrong).filter(id=>BYID[id]&&BYID[id].subject===sub); }
-function recordStat(q,good){ const st=(S.stats[q.subject]=S.stats[q.subject]||{}); const a=(st[q.area]=st[q.area]||{seen:0,correct:0}); a.seen++; if(good){a.correct++; delete S.wrong[q.id];} else { S.wrong[q.id]=1; } save(); }
+function recordStat(q,good){ const st=(S.stats[q.subject]=S.stats[q.subject]||{}); const a=(st[q.area]=st[q.area]||{seen:0,correct:0}); a.seen++; const dk=todayStr(); S.daily=S.daily||{}; const dd=(S.daily[dk]=S.daily[dk]||{a:0,c:0}); dd.a++; if(good){a.correct++; dd.c++; delete S.wrong[q.id];} else { S.wrong[q.id]=1; } save(); }
 function weakAreas(sub){ const st=S.stats[sub]||{}; const arr=[]; AREAS[sub].forEach((a,i)=>{ const s=st[a.code]; if(s&&s.seen>=3){ arr.push({code:a.code,ai:i,acc:Math.round(s.correct/s.seen*100)}); } }); arr.sort((x,y)=>x.acc-y.acc); return arr.slice(0,3); }
 
 /* ============ SOUND ============ */
@@ -412,6 +428,7 @@ function render(){
     </div>
     <div class="goalbtns"><button class="statsbtn" onclick="openStats()">📊 Accuracy by area</button><button class="statsbtn syl" onclick="openSyllabus()">📚 Syllabus coverage</button><button class="statsbtn notes" onclick="openNotes()">📝 My notes</button><button class="statsbtn dl" onclick="openDeadlines()">⏱️ Deadlines</button></div>
   </div>
+  ${dailyCard()}
   ${sideQuestHTML(sub)}
   ${examHTML(sub)}
   ${examHallHTML(sub)}
@@ -634,7 +651,7 @@ function startNode(k){
   if(!unlocked(sub,k))return;
   const boss=n.type==='boss'; const d=difficulty(n.ai);
   let qs;
-  if(boss){ let pool=[]; for(let i=0;i<=n.ai;i++) pool=pool.concat(AREAS[sub][i].qs); qs=sample(pool,Math.min(d.bossN,pool.length)); }
+  if(boss){ qs=bossQuestions(sub,n.ai,d.bossN); }
   else qs=sample(AREAS[sub][n.ai].qs, Math.min(d.lessN,AREAS[sub][n.ai].qs.length));
   const hh=boss?3:d.lessH;
   Q={sub,k,n,boss,mode:'node',qs,idx:0,hearts:hh,maxH:hh,combo:0,correct:0,xp:0,answered:false};
@@ -828,6 +845,30 @@ function startDeadlinePractice(i){ const dl=DEADLINES[i]; if(!dl||!dl.qids.lengt
   const qs=sample(dl.qids.map(id=>BYID[id]).filter(Boolean), Math.min(10,dl.qids.length)); if(!qs.length)return;
   const ex=document.querySelector('.statscr'); if(ex)ex.remove(); window._dlBack=1;
   Q={sub:dl.s,mode:'practice',boss:false,qs,idx:0,hearts:99,maxH:99,combo:0,correct:0,xp:0,answered:false,hlOn:false}; lockScroll(); drawQ(); }
+
+/* ============ DAILY TRACKER + GATEKEEPER VARIETY ============ */
+function dailyCard(){
+  const goal=S.dailyGoal||30, days=[];
+  for(let i=6;i>=0;i--){ const dt=new Date(Date.now()-i*864e5), k=dt.toISOString().slice(0,10), e=(S.daily&&S.daily[k])||{a:0,c:0}; days.push({a:e.a,c:e.c,dow:'SMTWTFS'[dt.getDay()]}); }
+  const t=days[6], max=Math.max(goal,...days.map(d=>d.a),1), pct=Math.min(100,Math.round(t.a/goal*100)), total7=days.reduce((s,d)=>s+d.a,0);
+  const bars=days.map((d,i)=>`<div class="dbar ${i===6?'today':''}"><div class="bwrap"><div class="bcol" style="height:${Math.max(4,Math.round(d.a/max*42))}px"></div></div><div class="bday">${d.dow}</div></div>`).join('');
+  return `<div class="daily"><div class="dhead"><span class="dbig">${t.a}</span><span class="dlbl">answered today</span><button class="dgoal" onclick="cycleGoal()">🎯 ${goal}/day</button></div>
+    <div class="dtrack"><i style="width:${pct}%"></i></div>
+    <div class="dbars">${bars}</div>
+    <div class="dfoot">${t.a?t.c+'/'+t.a+' right today · ':''}${total7} in the last 7 days · 🔥 ${S.streak}-day streak${t.a>=goal&&t.a>0?' 🎉':''}</div></div>`;
+}
+function cycleGoal(){ const g=[15,20,30,50,100], i=g.indexOf(S.dailyGoal||30); S.dailyGoal=g[(i+1)%g.length]; save(); render(); }
+function bossQuestions(sub,uptoAi,n){
+  S.served=S.served||{};
+  const areas=[]; for(let i=0;i<=uptoAi;i++) if(AREAS[sub][i]) areas.push(AREAS[sub][i]);
+  const svd=q=>S.served[q.id]||0, fresh=(x,y)=>(svd(x)-svd(y))||(Math.random()-0.5);
+  const per=Math.max(1,Math.floor(n/areas.length)), pick=[];
+  areas.forEach(a=>{ pick.push(...a.qs.slice().sort(fresh).slice(0,per)); });
+  if(pick.length<n){ const rest=areas.reduce((z,a)=>z.concat(a.qs),[]).filter(q=>pick.indexOf(q)<0).sort(fresh); pick.push(...rest.slice(0,n-pick.length)); }
+  const chosen=shuffle(pick).slice(0,Math.min(n,pick.length));
+  chosen.forEach(q=>{ S.served[q.id]=svd(q)+1; }); save();
+  return chosen;
+}
 
 /* ============ BOOT ============ */
 if(!BANK.length){ $('#app').innerHTML='<div class="subtle" style="padding-top:60px;font-size:15px">⚠️ Could not load the question bank.<br><br>Make sure <b>bank.js</b> is in the same folder as this file, then reopen.</div>'; }
