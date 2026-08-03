@@ -310,6 +310,13 @@ body{background:linear-gradient(180deg,#20222e,#14151d)}
 .wbrow.stk{border-left-color:#d6336c;background:#fffdf7}
 .wbrule{font-size:11px;color:#7a5a2c;font-weight:800}
 .wbnote.sn{color:#2b2b2b;font-weight:600}
+/* ===== skip area ===== */
+.skipbtn{margin-left:auto;background:var(--panel);border:2px solid var(--line);color:var(--muted);font-weight:800;font-size:11px;padding:3px 10px;border-radius:99px}
+.skipbtn:active{transform:translateY(1px)}
+.unit-h.skipped{opacity:.62}
+.unit-h.skipped .chip{background:#b7b7b7}
+.unit-h.skipped .nm{text-decoration:line-through;color:var(--muted)}
+.skiptag{font-size:11px;font-weight:800;color:#8a8a8a;background:#ededed;border-radius:99px;padding:2px 9px}
 </style>
 </head>
 <body>
@@ -420,9 +427,9 @@ const BYID={}; BANK.forEach(q=>{ BYID[q.id]=q; });
 
 /* ============ STATE ============ */
 const KEY='barquest_v1';
-const DEF={subject:'Civil', xp:0, streak:0, last:null, sound:true, bionic:true, done:{Civil:{},Criminal:{}}, wrong:{}, stats:{Civil:{},Criminal:{}}, examBest:{Civil:0,Criminal:0}, examTier:{Civil:1,Criminal:1}, covered:{Civil:{},Criminal:{}}, pals:{}, papers:{}, notes:{}, daily:{}, dailyGoal:30, served:{}};
+const DEF={subject:'Civil', xp:0, streak:0, last:null, sound:true, bionic:true, done:{Civil:{},Criminal:{}}, wrong:{}, stats:{Civil:{},Criminal:{}}, examBest:{Civil:0,Criminal:0}, examTier:{Civil:1,Criminal:1}, covered:{Civil:{},Criminal:{}}, pals:{}, papers:{}, notes:{}, daily:{}, dailyGoal:30, served:{}, skipped:{Civil:{},Criminal:{}}};
 let S = load();
-function load(){ const base=JSON.parse(JSON.stringify(DEF)); try{const s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.done) Object.assign(base,s);}catch(e){} base.wrong=base.wrong||{}; base.stats=base.stats||{Civil:{},Criminal:{}}; base.stats.Civil=base.stats.Civil||{}; base.stats.Criminal=base.stats.Criminal||{}; base.examBest=base.examBest||{Civil:0,Criminal:0}; base.examTier=base.examTier||{Civil:1,Criminal:1}; base.covered=base.covered||{Civil:{},Criminal:{}}; base.covered.Civil=base.covered.Civil||{}; base.covered.Criminal=base.covered.Criminal||{}; base.pals=base.pals||{}; base.papers=base.papers||{}; base.notes=base.notes||{}; base.daily=base.daily||{}; base.dailyGoal=base.dailyGoal||30; base.served=base.served||{}; if(base.bionic===undefined)base.bionic=true; return base; }
+function load(){ const base=JSON.parse(JSON.stringify(DEF)); try{const s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.done) Object.assign(base,s);}catch(e){} base.wrong=base.wrong||{}; base.stats=base.stats||{Civil:{},Criminal:{}}; base.stats.Civil=base.stats.Civil||{}; base.stats.Criminal=base.stats.Criminal||{}; base.examBest=base.examBest||{Civil:0,Criminal:0}; base.examTier=base.examTier||{Civil:1,Criminal:1}; base.covered=base.covered||{Civil:{},Criminal:{}}; base.covered.Civil=base.covered.Civil||{}; base.covered.Criminal=base.covered.Criminal||{}; base.pals=base.pals||{}; base.papers=base.papers||{}; base.notes=base.notes||{}; base.daily=base.daily||{}; base.dailyGoal=base.dailyGoal||30; base.served=base.served||{}; base.skipped=base.skipped||{Civil:{},Criminal:{}}; base.skipped.Civil=base.skipped.Civil||{}; base.skipped.Criminal=base.skipped.Criminal||{}; if(base.bionic===undefined)base.bionic=true; return base; }
 const SYL=(window.SYLLABUS)||{Civil:[],Criminal:[]};
 function bionic(raw){ return String(raw||'').split(/(\s+)/).map(t=>{ if(!t||/^\s+$/.test(t))return esc(t); const n=t.length,k=n<=3?1:n<=6?2:Math.ceil(n*0.42); return '<b>'+esc(t.slice(0,k))+'</b>'+esc(t.slice(k)); }).join(''); }
 function fmt(s){ s=Math.max(0,s|0); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
@@ -440,7 +447,10 @@ function nextRank(xp){for(const x of RANKS)if(xp<x[0])return x;return null;}
 function todayStr(){return new Date().toISOString().slice(0,10);}
 function nodeKey(n){return n.type+n.ai;}
 function isDone(sub,k){const n=nodesFor(sub)[k];return !!(S.done[sub]&&S.done[sub][nodeKey(n)]);}
-function unlocked(sub,k){return k===0?true:isDone(sub,k-1);}
+function areaSkipped(sub,ai){const a=AREAS[sub][ai];return !!(a&&S.skipped&&S.skipped[sub]&&S.skipped[sub][a.code]);}
+function passed(sub,k){const n=nodesFor(sub)[k];return isDone(sub,k)||areaSkipped(sub,n.ai);}
+function unlocked(sub,k){return k===0?true:passed(sub,k-1);}
+function toggleSkip(sub,code){S.skipped=S.skipped||{Civil:{},Criminal:{}};S.skipped[sub]=S.skipped[sub]||{};S.skipped[sub][code]=!S.skipped[sub][code];save();render();}
 function progressPct(sub){const nl=nodesFor(sub);let d=0;nl.forEach((n,k)=>{if(isDone(sub,k))d++;});return nl.length?Math.round(d/nl.length*100):0;}
 function mistakeIds(sub){ return Object.keys(S.wrong).filter(id=>BYID[id]&&BYID[id].subject===sub); }
 function recordStat(q,good){ const st=(S.stats[q.subject]=S.stats[q.subject]||{}); const a=(st[q.area]=st[q.area]||{seen:0,correct:0}); a.seen++; const dk=todayStr(); S.daily=S.daily||{}; const dd=(S.daily[dk]=S.daily[dk]||{a:0,c:0}); dd.a++; if(good){a.correct++; dd.c++; delete S.wrong[q.id];} else { S.wrong[q.id]=1; } save(); }
@@ -497,7 +507,7 @@ const BOSS_SVG=`<svg class="bosschar" viewBox="0 0 72 72">
 /* ============ RENDER: HOME ============ */
 function render(){
   const sub=S.subject, nl=nodesFor(sub);
-  let cur=nl.findIndex((n,k)=>unlocked(sub,k)&&!isDone(sub,k)); if(cur<0)cur=nl.length-1;
+  let cur=nl.findIndex((n,k)=>unlocked(sub,k)&&!isDone(sub,k)&&!areaSkipped(sub,n.ai)); if(cur<0)cur=nl.length-1;
   const nr=nextRank(S.xp);
   let h=`
   <div class="hud">
@@ -526,11 +536,12 @@ function render(){
   <div class="path">`;
   let lastAi=-1;
   nl.forEach((n,k)=>{
-    const area=AREAS[sub][n.ai], done=isDone(sub,k), unl=unlocked(sub,k), isCur=k===cur;
+    const area=AREAS[sub][n.ai], done=isDone(sub,k), unl=unlocked(sub,k), isCur=k===cur, skip=areaSkipped(sub,n.ai);
     if(n.ai!==lastAi){ lastAi=n.ai;
-      h+=`<div class="unit-h ${sub==='Civil'?'civ':'crim'}"><span class="chip">FLOOR ${n.ai+1} · ${area.code}</span>
-          <span class="nm">${esc(area.name)}</span>${HIGH[sub].has(area.code)?'<span class="star">★ high-yield</span>':''}</div>`;
+      h+=`<div class="unit-h ${sub==='Civil'?'civ':'crim'} ${skip?'skipped':''}"><span class="chip">FLOOR ${n.ai+1} · ${area.code}</span>
+          <span class="nm">${esc(area.name)}</span>${skip?'<span class="skiptag">💤 skipped</span>':(HIGH[sub].has(area.code)?'<span class="star">★ high-yield</span>':'')}<button class="skipbtn" onclick="toggleSkip('${sub}','${area.code}')">${skip?'↩ include':'skip'}</button></div>`;
     }
+    if(skip) return;
     const off=(k%4===1?70:k%4===2?0:k%4===3?-70:0);
     const cls=n.type==='boss'?'boss':'lesson';
     const state=done?'done':(unl?cls:'locked');
@@ -589,7 +600,7 @@ function examHTML(sub){ const ti=tierIdx(sub), t=EXAM_TIERS[ti], best=(S.examBes
     <div class="exs">${t.title} · ${t.n} Qs · ${t.per}s each · pass ${t.pass}%${best?` · best ${best}%`:''}</div></div>
     <button class="exbtn" onclick="startExam()">CHALLENGE</button></div>
     <div class="badges">🏅 Badges won: ${badges}</div></div>`; }
-function startExam(){ const sub=S.subject, ti=tierIdx(sub), t=EXAM_TIERS[ti]; let pool=[]; AREAS[sub].forEach(a=>pool=pool.concat(a.qs));
+function startExam(){ const sub=S.subject, ti=tierIdx(sub), t=EXAM_TIERS[ti]; let pool=[]; AREAS[sub].forEach((a,i)=>{ if(!areaSkipped(sub,i))pool=pool.concat(a.qs); });
   if(pool.length<5){alert('Not enough questions.');return;}
   const N=Math.min(t.n,pool.length); const qs=sample(pool,N);
   Q={sub,mode:'exam',boss:false,qs,idx:0,hearts:99,maxH:99,combo:0,correct:0,xp:0,answered:false,timeLeft:N*t.per,timerId:null,pass:t.pass,tier:ti};
@@ -951,7 +962,8 @@ function dailyCard(){
 function cycleGoal(){ const g=[15,20,30,50,100], i=g.indexOf(S.dailyGoal||30); S.dailyGoal=g[(i+1)%g.length]; save(); render(); }
 function bossQuestions(sub,uptoAi,n){
   S.served=S.served||{};
-  const areas=[]; for(let i=0;i<=uptoAi;i++) if(AREAS[sub][i]) areas.push(AREAS[sub][i]);
+  const areas=[]; for(let i=0;i<=uptoAi;i++) if(AREAS[sub][i]&&!areaSkipped(sub,i)) areas.push(AREAS[sub][i]);
+  if(!areas.length){ for(let i=0;i<=uptoAi;i++) if(AREAS[sub][i]) areas.push(AREAS[sub][i]); }
   const svd=q=>S.served[q.id]||0, fresh=(x,y)=>(svd(x)-svd(y))||(Math.random()-0.5);
   const per=Math.max(1,Math.floor(n/areas.length)), pick=[];
   areas.forEach(a=>{ pick.push(...a.qs.slice().sort(fresh).slice(0,per)); });
