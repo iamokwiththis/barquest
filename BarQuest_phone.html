@@ -404,6 +404,14 @@ body{background:linear-gradient(180deg,#20222e,#14151d)}
 .rbtn.hard{background:#f0902a;box-shadow:0 4px 0 #c76f14}
 .rbtn.good{background:#06c48f;box-shadow:0 4px 0 #05a377}
 .rbtn.easy{background:#1cb0f6;box-shadow:0 4px 0 #1690cf}
+.fbagain{margin-top:8px;font-size:12.5px;font-weight:800;color:#6a2ca0;background:#f2ecff;border-radius:8px;padding:6px 10px}
+.statsbtn.p2{background:#e2f0ff;border-color:#c6def5;color:#1560a8}
+.p2gauge{display:flex;align-items:center;gap:16px;padding:12px 4px 6px}
+.p2dial{width:98px;height:98px;border-radius:50%;flex:0 0 98px;background:conic-gradient(var(--c) calc(var(--v)*1%),#e9e9f0 0);display:flex;align-items:center;justify-content:center;position:relative}
+.p2dial::before{content:"";position:absolute;inset:12px;background:#fff;border-radius:50%}
+.p2dial span{position:relative;font-weight:900;font-size:23px}
+.p2lbl{font-size:13.5px;font-weight:800;color:#33456b;line-height:1.45}.p2lbl small{color:var(--muted);font-weight:600;font-size:11.5px}
+.p2btns{display:flex;gap:8px;margin:8px 0 2px;flex-wrap:wrap}.p2btns .statsbtn{flex:1;min-width:120px}
 </style>
 </head>
 <body>
@@ -887,7 +895,7 @@ function render(){
       <div class="b"><span>Civil ${progressPct('Civil')}%</span><div class="track civ"><i style="width:${progressPct('Civil')}%"></i></div></div>
       <div class="b"><span>Criminal ${progressPct('Criminal')}%</span><div class="track crim"><i style="width:${progressPct('Criminal')}%"></i></div></div>
     </div>
-    <div class="goalbtns"><button class="statsbtn" onclick="openStats()">📊 Accuracy &amp; coverage</button><button class="statsbtn notes" onclick="openNotes()">📝 My notes</button><button class="statsbtn dl" onclick="openDeadlines()">⏱️ Deadlines</button><button class="statsbtn wb" onclick="openWhiteBook()">📖 White Book · P2</button><button class="statsbtn pat" onclick="openPatterns()">🎭 Patterns</button><button class="statsbtn flash" onclick="openFlash()">🃏 Flash cards</button></div>
+    <div class="goalbtns"><button class="statsbtn" onclick="openStats()">📊 Accuracy &amp; coverage</button><button class="statsbtn notes" onclick="openNotes()">📝 My notes</button><button class="statsbtn dl" onclick="openDeadlines()">⏱️ Deadlines</button><button class="statsbtn wb" onclick="openWhiteBook()">📖 White Book · P2</button><button class="statsbtn pat" onclick="openPatterns()">🎭 Patterns</button><button class="statsbtn flash" onclick="openFlash()">🃏 Flash cards</button><button class="statsbtn p2" onclick="openP2Ready()">🎓 Paper 2 ready</button></div>
   </div>
   ${dailyCard()}
   ${sideQuestHTML(sub)}
@@ -941,19 +949,18 @@ function openSideQuest(){ const sub=S.subject; const ex=document.querySelector('
   const max=rows.length?rows[0][1].n:1;
   const list=rows.map(([code,o])=>`<div class="sqrow" onclick="startAreaMistakes('${sub}','${code}')"><div class="sqrh"><span class="stcode">${code}</span><span class="stname">${esc(o.name)}</span><span class="sqrn">${o.n}</span></div><div class="sqbar2"><i style="width:${Math.round(o.n/max*100)}%"></i></div></div>`).join('');
   const h=`<div class="statscr"><div class="sctop"><button class="x" onclick="closeStats()">✕</button><div class="sctitle">⚡ Redo — ${sub}</div></div>
-    <div class="scoverall">${ids.length} wrong across ${rows.length} area${rows.length>1?'s':''} · your focus list, most mistakes first. Tap an area to drill just those, or redo all in order.</div>
-    <div class="sqallbtn"><button class="cta cont" onclick="startSideQuest()">▶ Redo all ${ids.length} · in area order</button></div>
+    <div class="scoverall">${ids.length} wrong across ${rows.length} area${rows.length>1?'s':''} · your focus list, most mistakes first. Tap an area to drill just those, or redo all. <b>Each question loops back until you answer it correctly.</b></div>
+    <div class="sqallbtn"><button class="cta cont" onclick="startSideQuest()">▶ Redo all ${ids.length} · loop until all correct</button></div>
     <div class="scbody">${list}</div></div>`;
   document.body.insertAdjacentHTML('beforeend',h); }
 function startAreaMistakes(sub,code){ const qs=mistakeIds(sub).map(id=>BYID[id]).filter(q=>q&&q.area===code); if(!qs.length)return;
   qs.sort((a,b)=>String(a.id)<String(b.id)?-1:1);
   const ex=document.querySelector('.statscr'); if(ex)ex.remove();
-  Q={sub,mode:'side',boss:false,qs,idx:0,hearts:99,maxH:99,combo:0,correct:0,xp:0,answered:false,hlOn:false}; lockScroll(); drawQ(); }
+  Q={sub,mode:'side',loop:true,boss:false,qs,idx:0,origTotal:qs.length,masteredSet:new Set(),seenIds:new Set(),firstTry:0,hearts:99,maxH:99,combo:0,correct:0,xp:0,answered:false,hlOn:false}; lockScroll(); drawQ(); }
 function startSideQuest(){ const ex=document.querySelector('.statscr'); if(ex)ex.remove(); const ids=mistakeIds(S.subject); if(!ids.length)return;
   let qs=ids.map(id=>BYID[id]).filter(Boolean);
   qs.sort((a,b)=> a.area<b.area?-1:a.area>b.area?1:(String(a.id)<String(b.id)?-1:1)); // grouped in syllabus order
-  if(qs.length>30)qs=qs.slice(0,30);
-  Q={sub:S.subject,mode:'side',boss:false,qs,idx:0,hearts:99,maxH:99,combo:0,correct:0,xp:0,answered:false,hlOn:false}; lockScroll(); drawQ(); }
+  Q={sub:S.subject,mode:'side',loop:true,boss:false,qs,idx:0,origTotal:qs.length,masteredSet:new Set(),seenIds:new Set(),firstTry:0,hearts:99,maxH:99,combo:0,correct:0,xp:0,answered:false,hlOn:false}; lockScroll(); drawQ(); }
 let _CLIX=null;
 function clicheIndex(){ if(_CLIX)return _CLIX; _CLIX={}; (CLICHES||[]).forEach(c=>{ (c.qids||[]).forEach(id=>{ if(!_CLIX[id])_CLIX[id]={label:c.label,trap:c.trap||c.tend||c.trig||''}; }); }); return _CLIX; }
 function principleFromExplain(q){ let e=(q.explain||'').replace(/\s+/g,' ').trim(); if(e.length<45) return null;
@@ -1183,7 +1190,7 @@ function drawQ(){
   const badge=SB[q.source]||['bsb',q.source||'Past paper'];
   const th=themeFor(Q.mode,Q.n?Q.n.ai:null,Q.boss);
   const timed=(Q.mode==='exam'||paper);
-  const hud=timed?('⏱ '+fmt(Q.timeLeft)):Q.mode==='node'?('❤️ '+Q.hearts):Q.mode==='side'?'⚡ Redo':'🎯 Practice';
+  const hud=timed?('⏱ '+fmt(Q.timeLeft)):Q.mode==='node'?('❤️ '+Q.hearts):Q.mode==='side'?(Q.loop?('⚡ '+Q.masteredSet.size+'/'+Q.origTotal):'⚡ Redo'):'🎯 Practice';
   let banner='';
   if(paper)banner=`<div class="paperban">🏛️ BSB ${Q.paper.year} · ${Q.paper.paper} — Q${Q.idx+1} of ${Q.qs.length}</div>`;
   else if(Q.boss||Q.mode==='exam')banner=`<div class="bossban ${Q.mode==='exam'?'t'+((Q.tier||0)+1):''}">${BOSS_SVG}<div class="bt2"><b>${Q.mode==='exam'?EXAM_TIERS[Q.tier||0].name:'Boss Checkpoint'}</b><br>${Q.mode==='exam'?('Beat '+Q.pass+'% under time'):'Defeat me to advance'}</div></div>`;
@@ -1195,7 +1202,7 @@ function drawQ(){
     <div class="qtop"><button class="x" onclick="quitQuiz()">✕</button>
       <button class="hlbtn ${Q.hlOn?'on':''}" onclick="toggleHl(this)" title="Highlighter — tap words to mark them">🖍️</button>
       <button class="notebtn ${hasNote(q.id)?'has':''}" onclick="openNoteEditor('${q.id}',0)" title="Write a note">📝</button>
-      <div class="qbar"><i style="width:${Q.idx/Q.qs.length*100}%"></i></div>
+      <div class="qbar"><i style="width:${Q.loop&&Q.origTotal?(Q.masteredSet.size/Q.origTotal*100):(Q.idx/Q.qs.length*100)}%"></i></div>
       <div class="hh ${timed&&Q.timeLeft<=60?'low':''}">${hud}</div></div>
     <div class="qbody">
       ${banner}
@@ -1229,14 +1236,16 @@ function checkA(){
   });
   const foot=document.querySelector('.qfoot');foot.classList.add('reveal');
   recordStat(q,good);
+  if(Q.loop){ if(!Q.seenIds.has(q.id)){ Q.seenIds.add(q.id); if(good)Q.firstTry++; } if(good)Q.masteredSet.add(q.id); else Q.qs.push(q); }
   const takeaway=(Q.mode==='side')?`<div class="fbhint">💡 <b>Takeaway:</b> ${esc(sideHint(q))}</div>`:'';
+  const againNote=(Q.loop&&!good)?`<div class="fbagain">↩ This one comes back until you get it right.</div>`:'';
   if(good){ Q.correct++; Q.combo++; const mult=Q.combo>=4?2:Q.combo>=2?1.5:1; const g=Math.round(10*mult);
     Q.xp+=g; beep('ok'); if(mult>1)showCombo('Combo ×'+mult+'!'); floatXP('+'+g);
     foot.innerHTML=`<div class="fb ok"><h4>✅ Correct!</h4>${q.explain?`<div class="ex">${S.bionic?bionic(q.explain):esc(q.explain)}</div>`:''}${takeaway}</div>
       <button class="cta cont" onclick="nextQ()">CONTINUE</button>`;
   } else { Q.combo=0; beep('no'); navigator.vibrate&&navigator.vibrate(120);
     const correctText=opts.find(o=>o.ok).t;
-    foot.innerHTML=`<div class="fb no"><h4>❌ Not quite</h4><div class="ex"><b>Correct answer:</b> ${S.bionic?bionic(correctText):esc(correctText)}${q.explain?'<br><br><b>Why:</b> '+(S.bionic?bionic(q.explain):esc(q.explain)):''}</div>${takeaway}</div>
+    foot.innerHTML=`<div class="fb no"><h4>❌ Not quite</h4><div class="ex"><b>Correct answer:</b> ${S.bionic?bionic(correctText):esc(correctText)}${q.explain?'<br><br><b>Why:</b> '+(S.bionic?bionic(q.explain):esc(q.explain)):''}</div>${takeaway}${againNote}</div>
       <button class="cta contno" onclick="nextQ()">CONTINUE</button>`;
     if(Q.mode==='node'){ Q.hearts--; const hh=document.querySelector('.hh'); if(hh)hh.textContent='❤️ '+Q.hearts;
       if(Q.hearts<=0){ setTimeout(()=>endQuiz(false),50); return; } }
@@ -1258,7 +1267,10 @@ function endQuiz(passed){
     examResultSheet(acc,pass,advanced); return; }
   if(passed){ const t=todayStr(); if(S.last!==t){ const y=new Date(Date.now()-864e5).toISOString().slice(0,10); S.streak=(S.last===y)?S.streak+1:1; S.last=t; } }
   if(Q.mode!=='node'){
-    if(passed) S.xp+=Q.xp; save(); beep('win'); if(acc>=50)confetti(false);
+    if(passed) S.xp+=Q.xp; save(); beep('win');
+    if(Q.loop){ confetti(true); const fa=Q.origTotal?Math.round(Q.firstTry/Q.origTotal*100):0;
+      resultSheetSimple('All '+Q.origTotal+' cleared! ⚡', fa, Q.xp); return; }
+    if(acc>=50)confetti(false);
     resultSheetSimple(Q.mode==='side'?'Mistakes practice done! ⚡':'Practice done! 🎯', acc, Q.xp); return;
   }
   if(passed){
@@ -1494,6 +1506,31 @@ function finishFlash(){ const orig=FC?FC.orig:0; const ex=document.querySelector
   document.body.insertAdjacentHTML('beforeend',h); FC=null; }
 function closeFlash(){ const s=document.querySelector('.sheet'); if(s)s.remove(); const f=document.querySelector('.flashscr'); if(f)f.remove(); FC=null; unlockScroll(); render(); }
 function closeFlashToDecks(){ const s=document.querySelector('.sheet'); if(s)s.remove(); const f=document.querySelector('.flashscr'); if(f)f.remove(); FC=null; unlockScroll(); openFlash(); }
+
+/* ============ PAPER 2 READINESS (closed-book) ============ */
+function p2Readiness(){ const st=(S.stats&&S.stats.Civil)||{}; const areas=AREAS.Civil||[]; let sum=0,tested=0;
+  const rows=areas.map((a,i)=>{ const s=st[a.code]; const seen=s?s.seen:0; const acc=seen?Math.round(s.correct/seen*100):null; const assessed=seen>=4;
+    if(assessed){ sum+=acc; tested++; }
+    return {code:a.code,name:a.name,ai:i,seen,acc,assessed}; });
+  const overall=areas.length?Math.round(sum/areas.length):0;
+  return {overall,tested,n:areas.length,rows}; }
+function openP2Ready(){ const ex=document.querySelector('.statscr'); if(ex)ex.remove();
+  const R=p2Readiness(); const col=v=>v>=80?'#58a700':v>=65?'#ff9600':'#ff4b4b'; const gc=col(R.overall);
+  const rows=R.rows.slice().sort((a,b)=>(a.assessed?a.acc:-1)-(b.assessed?b.acc:-1)).map(r=>{
+    const c=!r.assessed?'#b9b9c2':col(r.acc);
+    const status=!r.assessed?(r.seen>0?('⚠ barely tested — '+r.seen+' done'):'○ not tested yet'):(r.acc>=80?'✅ recall it cold':r.acc>=65?'◐ nearly there':'✗ still book-dependent');
+    return `<div class="strow"><div class="sthead" onclick="p2Drill(${r.ai})"><span class="stcode">${r.code}</span><span class="stname">${esc(r.name)}</span><span class="stacc" style="color:${c}">${r.assessed?r.acc+'%':(r.seen?r.seen+'q':'—')}</span></div>
+      <div class="stbar" onclick="p2Drill(${r.ai})"><i style="width:${r.assessed?r.acc:(r.seen?8:0)}%;background:${c}"></i></div>
+      <div class="stseen">${status} · <a class="factlink" onclick="event.stopPropagation();p2Drill(${r.ai})">▶ drill closed-book</a></div></div>`; }).join('');
+  const msg=R.overall>=80?'Exam-ready range — keep it sharp and fast.':R.overall>=65?'Getting close — clear the red areas below.':'Building — hammer the weak areas and the must-knows.';
+  const h=`<div class="statscr"><div class="sctop"><button class="x" onclick="closeStats()">✕</button><div class="sctitle">🎓 Paper 2 — closed-book readiness</div></div>
+    <div class="p2gauge"><div class="p2dial" style="--v:${R.overall};--c:${gc}"><span style="color:${gc}">${R.overall}%</span></div>
+      <div class="p2lbl">${msg}<br><small>${R.tested}/${R.n} Civil areas at a confident level (≥80%) · target: green across the board</small></div></div>
+    <div class="scoverall">BarQuest is already closed-book, so your accuracy here <b>is</b> your "answer Paper 2 without the White Book" readiness. Green = you can recall it cold; red = you'd still be reaching for the book.</div>
+    <div class="p2btns"><button class="statsbtn wb" onclick="openWhiteBook()">📝 Must-knows</button><button class="statsbtn flash" onclick="openFlash()">🃏 Flash cards</button><button class="statsbtn dl" onclick="openDeadlines()">⏱️ Time limits</button></div>
+    <div class="scbody">${rows}</div></div>`;
+  document.body.insertAdjacentHTML('beforeend',h); }
+function p2Drill(ai){ const ex=document.querySelector('.statscr'); if(ex)ex.remove(); if(S.subject!=='Civil'){S.subject='Civil';save();} startAreaPractice('Civil',ai); }
 
 /* ============ BOOT ============ */
 if(!BANK.length){ $('#app').innerHTML='<div class="subtle" style="padding-top:60px;font-size:15px">⚠️ Could not load the question bank.<br><br>Make sure <b>bank.js</b> is in the same folder as this file, then reopen.</div>'; }
